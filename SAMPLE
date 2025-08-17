@@ -1,0 +1,86 @@
+'''
+Student Counseling Data Management System (SCDMS): Session Module
+This class represents the session module of the SCDMS.
+
+This is the implementation of the Session class and its subclasses.
+'''
+###### THIS IS THE SESSION SUPERCLASS. DO NOT EDIT THIS CLASS ######
+
+class Session:
+    '''
+    This class represents a session in the Student Counseling Data Management System.
+    It contains information about the session such as date, time, and duration.
+    '''
+    
+    def __init__(self, session_id, session_schedule, student, counselor):
+        '''
+        Initializes a new session with the given parameters.
+        
+        Parameters:
+        session_id: Unique identifier for the session
+        session_schedule: ScheduleSlot object representing the session schedule
+        student: Student object representing the student in the session
+        counselor: Counselor object representing the counselor in the session
+        session_notes: SessionNotes object containing notes for the session
+        '''
+        self.__session_id = session_id
+        self.__session_schedule = session_schedule
+        self.__student = student
+        self.__counselor = counselor
+        self.__session_notes = None  # Initially, there are no notes for the session
+
+    def update_session_details(self, session_schedule=None, student=None, counselor=None):
+        '''
+        Updates the session details with the provided parameters.
+        
+        Parameters:
+        session_schedule: New ScheduleSlot object to update the session schedule
+        student: New Student object to update the student in the session
+        counselor: New Counselor object to update the counselor in the session
+        '''
+        if session_schedule:            # If a new session schedule is provided, update it
+            self.__session_schedule = session_schedule
+        if student:                     # If a new student is provided, update it
+            self.__student = student
+        if counselor:                   # If a new counselor is provided, update it
+            self.__counselor = counselor
+    
+    def get_session_details(self):
+        '''
+        Returns the details of the session as a dictionary.
+        
+        Returns:
+        A dictionary containing the session ID, schedule, student, counselor, and notes.
+        '''
+        return {
+            'session_id': self.__session_id,
+            'session_schedule': self.__session_schedule,
+            'student': self.__student,
+            'counselor': self.__counselor,
+            'session_notes': self.__session_notes
+        }
+
+###### DO NOT EDIT THE SESSION SUPERCLASS ABOVE ######
+
+###### YOU MUST EDIT THE CLASSES BELOW ######
+
+###### SUPPLY THE ATTRIBUTES AND METHODS FOR GUIDANCE SESSION BASED ON THE SPECIFICATIONS ######
+class GuidanceSession(Session):
+    '''
+    Represents a guidance session in the Student Counseling Data Management System.
+    Inherits from the Session class and adds functionality specific to guidance sessions.
+    '''
+
+###### SUPPLY THE ATTRIBUTES AND METHODS FOR MENTAL HEALTH SESSION BASED ON THE SPECIFICATIONS ######
+class MentalHealthSession(Session):
+    '''
+    Represents a mental health session in the Student Counseling Data Management System.
+    Inherits from the Session class and adds functionality specific to mental health sessions.
+    '''
+
+###### SUPPLY THE ATTRIBUTES AND METHODS FOR CAREER SESSION BASED ON THE SPECIFICATIONS ######
+class CareerSession(Session):
+    '''
+    Represents a career session in the Student Counseling Data Management System.
+    Inherits from the Session class and adds functionality specific to career sessions.
+    '''
