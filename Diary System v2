@@ -1,0 +1,31 @@
+class DiarySystem:
+    '''Represents the system of the diary, includes entries and encryption key'''
+    
+    def __init__(self, entries, encryption_key):
+        '''Initializes the Diary System class
+
+        Parameters:
+        entries: The list of diary entries.
+        encryption_key: The encryption keys used to encrypt the diary
+        '''
+        self.entries = entries
+        self.encryption_key = encryption_key
+
+    def load_entry(self):
+        ''' Displays a diary entry '''
+        
+    
+    def save_entry (self):
+        ''' Save a diary entry'''
+
+    def update_entry (self):
+        ''' Update a diary entry'''
+    
+    def add_entry (self):
+        ''' Add a diary entry'''
+    
+    def delete_entry (self):
+        ''' Delete a diary entry'''
+
+    def change_encryption_key (self):
+        ''' Change the encryption key'''
