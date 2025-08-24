@@ -1,0 +1,112 @@
+from datetime import datetime, timezone
+from typing import List, Dict, Optional 
+import uuid
+
+#dict for dictionary 
+#UUID for Universally Unique Identifier (for IDs)
+#just a sample how the system would look like, baka magbago lahat once may encryption na 
+
+class DiarySystem:
+    """
+    Diary System (no encryption, no files).
+    Each entry is a dict: {"id", "content", "entry_date"}.
+    """
+
+    def __init__(self, entries: Optional[List[Dict]] = None, encryption_key: Optional[str] = None):
+        self.entries: List[Dict] = entries or []
+        self.encryption_key: Optional[str] = encryption_key
+
+
+    def load_entry(self, entry_id: str) -> Dict:
+        """Return a diary entry by its id."""
+        for e in self.entries:
+            if e["id"] == entry_id:
+                return e.copy()
+        raise KeyError(f"Entry '{entry_id}' not found.")
+
+    def save_entry(self, entry: Dict) -> Dict:
+        """
+        Upsert: if 'id' exists, update that entry; otherwise add a new one.
+        Expects a dict like {"id"?: str, "content": str, "entry_date"?: str}.
+        """
+        entry_id = entry.get("id")
+        if entry_id:
+            for i, e in enumerate(self.entries):
+                if e["id"] == entry_id:
+                    self.entries[i]["content"] = entry.get("content", e["content"])
+                    self.entries[i]["entry_date"] = entry.get("entry_date", e["entry_date"])
+                    return self.entries[i].copy()
+        # treat as new entry
+        return self.add_entry(entry.get("content", ""), entry.get("entry_date"))
+
+    def add_entry(self, content: str, entry_date: Optional[str] = None) -> Dict:
+        """Create a new entry and return it."""
+        entry = {
+            "id": str(uuid.uuid4()),
+            "content": str(content),
+            "entry_date": entry_date
+                or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        self.entries.append(entry.copy())
+        return entry.copy()
+
+
+    def update_entry(self, entry_id: str, new_content: str) -> Dict:
+        """Update an existing entry's content."""
+        for e in self.entries:
+            if e["id"] == entry_id:
+                e["content"] = str(new_content)
+                return e.copy()
+        raise KeyError(f"Entry '{entry_id}' not found.")
+
+    def delete_entry(self, entry_id: str) -> None:
+        """Delete an entry by id."""
+        for i, e in enumerate(self.entries):
+            if e["id"] == entry_id:
+                del self.entries[i]
+                return
+        raise KeyError(f"Entry '{entry_id}' not found.")
+
+    def change_encryption_key(self, new_key: Optional[str]) -> None:
+        """Just store the new key (no encryption yet)."""
+        self.encryption_key = new_key
+
+    def list_entries(self) -> List[Dict]:
+        return [e.copy() for e in self.entries]
+
+
+def show_entry(entry: Dict, number: Optional[int] = None):
+    if number is not None:
+        print(f"Entry #{number}")
+    print(f"ID: {entry['id']}")
+    print(f"Date: {entry['entry_date']}")
+    print(f"Content: {entry['content']}")
+    print("-" * 30)
+
+
+# Demo Sample
+if __name__ == "__main__":
+    ds = DiarySystem()
+
+    print("1) add_entry")
+    added = ds.add_entry("first day of testing 🎉") 
+    show_entry(added, 1)
+
+    print("\n2) list_entries")
+    for idx, e in enumerate(ds.list_entries(), start=1):
+        show_entry(e, idx)
+
+    print("\n3) load_entry")
+    show_entry(ds.load_entry(added["id"]))
+
+    print("\n4) update_entry")
+    updated = ds.update_entry(added["id"], "updated content")
+    show_entry(updated)
+
+    print("\n5) delete_entry")
+    ds.delete_entry(added["id"])
+    print("All entries after delete:", ds.list_entries())
+
+    print("\n6) change_encryption_key")
+    ds.change_encryption_key("my-new-key")
+    print("Encryption key is now:", ds.encryption_key)
