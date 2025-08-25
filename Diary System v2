@@ -1,3 +1,5 @@
+from DiaryEntry import  DiaryEntry
+
 class DiarySystem:
     '''Represents the system of the diary, includes entries and encryption key'''
     
@@ -11,12 +13,17 @@ class DiarySystem:
         self.entries = entries
         self.encryption_key = encryption_key
 
-    def load_entry(self):
+    def load_entry(self, entry_id):
         ''' Displays a diary entry '''
-        
+        entries = {}
+        entry_id = entries.items()
+
+        # for key, value in entries.items():
+        #     print (f"{key}: {value}") SHOULD GET SPECIFIC ENTRY
     
     def save_entry (self):
         ''' Save a diary entry'''
+        
 
     def update_entry (self):
         ''' Update a diary entry'''
