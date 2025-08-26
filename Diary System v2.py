@@ -10,17 +10,22 @@ class DiarySystem:
         entries: The list of diary entries.
         encryption_key: The encryption keys used to encrypt the diary
         '''
-        self.entries = entries
+        self.entries = entries 
         self.encryption_key = encryption_key
 
-    def load_entry(self):
+    def load_entry(self, entries):
         ''' Displays a diary entry '''
-        return self.entries
-        # entries = {}
-        # entry_id = entries.keys()
-        # entries.get({entries.values()})
-        #need to get content for each entry
-        
+        # entries = {
+        #     'Entry no.': int(),
+        #     'Date': DiaryEntry.get_entry_date,
+        #     'My Entry': DiaryEntry.get_content
+        # }
+
+        # for key, value in entries.items():
+        #     print(f'{key}: {value}')
+        # #prints all keys for every value
+        # #find a way to use get() pag isa-isa
+
     def save_entry (self):
         ''' Save a diary entry'''
         
@@ -42,10 +47,6 @@ class DiarySystem:
 
 #testing eme
 
-ds1 = DiarySystem(entries= "Slay", encryption_key="fesdmklvdsjlg")
+# ds1 = DiarySystem(entries= "Slay", encryption_key="fesdmklvdsjlg")
 
-print("My entry: ", ds1.load_entry())
 
-ds1.update_entry("Not groovy")
-
-print("My entry: ", ds1.load_entry())
