@@ -19,7 +19,7 @@ class DiaryEntry:
     def get_encrypted_content(self):
         self.__encrypted_content
 
---------------------DIART ENTRIES WITH INHERITANCE AND POLYMORPHISM------------------------
+#--------------------DIART ENTRIES WITH INHERITANCE AND POLYMORPHISM------------------------
 
 from datetime import datetime
 from abc import ABC, abstractmethod
