@@ -1,266 +1,220 @@
 import os
-import json
-import getpass
-from dataclasses import dataclass, field
+import string
+import random
 from datetime import datetime
-from pathlib import Path
-from typing import List, Tuple
-
-# --- crypto (tiny + safe): Fernet with password-derived key ---
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
-from cryptography.fernet import Fernet
-import base64
-import os
 
 
+# -------------------------
+# Encryption Class
+# -------------------------
 class Encryption:
-    """Password-based encryption using Fernet (AES128 + HMAC, time-tested)."""
+    def __init__(self, key: str):
+        self.key = key
+        self.alphabet = string.ascii_letters + string.digits + string.punctuation + " "
+        self.cipher = self._make_cipher(key)
+        self.reverse_cipher = {v: k for k, v in self.cipher.items()}
 
-    # we store files as: salt(16 bytes) + fernet_token(bytes)
-    SALT_LEN = 16
-    ITER = 200_000
+    def _make_cipher(self, password: str):
+        chars = list(self.alphabet)
+        random.seed(password)  # makes cipher unique per password
+        shuffled = chars.copy()
+        random.shuffle(shuffled)
+        return dict(zip(chars, shuffled))
 
-    @staticmethod
-    def _key_from_password(password: str, salt: bytes) -> bytes:
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=Encryption.ITER,
-        )
-        return base64.urlsafe_b64encode(kdf.derive(password.encode("utf-8")))
+    def encrypt(self, text: str) -> str:
+        return "".join(self.cipher.get(c, c) for c in text)
 
-    @classmethod
-    def encrypt(cls, data: bytes, password: str) -> bytes:
-        salt = os.urandom(cls.SALT_LEN)
-        key = cls._key_from_password(password, salt)
-        token = Fernet(key).encrypt(data)
-        return salt + token
-
-    @classmethod
-    def decrypt(cls, blob: bytes, password: str) -> bytes:
-        salt, token = blob[: cls.SALT_LEN], blob[cls.SALT_LEN :]
-        key = cls._key_from_password(password, salt)
-        return Fernet(key).decrypt(token)
+    def decrypt(self, text: str) -> str:
+        return "".join(self.reverse_cipher.get(c, c) for c in text)
 
 
-# ---------------- DiaryEntry ----------------
-@dataclass
+# -------------------------
+# DiaryEntry Class
+# -------------------------
 class DiaryEntry:
-    content: str = ""                 # decrypted text
-    encrypted_content: bytes = b""    # encrypted form (for saving)
-    entry_date: datetime = field(default_factory=datetime.now)
+    def __init__(self, content: str, encryption: Encryption):
+        self.entry_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._content = content
+        self.encrypted_content = encryption.encrypt(content)
 
-    def encrypt_entry(self, password: str) -> None:
-        self.encrypted_content = Encryption.encrypt(self.content.encode("utf-8"), password)
-
-    def decrypt_entry(self, password: str) -> None:
-        if not self.encrypted_content:
-            raise ValueError("Nothing to decrypt.")
-        self.content = Encryption.decrypt(self.encrypted_content, password).decode("utf-8")
-
-    def get_content(self) -> str:
-        return self.content
-
-    def set_content(self, new_content: str) -> None:
-        self.content = new_content
-
-    def get_entry_date(self) -> datetime:
+    def get_date(self):
         return self.entry_date
- 
 
-# ---------------- User ----------------
-@dataclass
+    def get_content(self, encryption: Encryption):
+        return encryption.decrypt(self.encrypted_content)
+
+    def update_content(self, new_content: str, encryption: Encryption):
+        self._content = new_content
+        self.encrypted_content = encryption.encrypt(new_content)
+
+
+# -------------------------
+# User Class
+# -------------------------
 class User:
-    username: str
-    password: str
-    name: str
+    def __init__(self, username: str, password: str, name: str):
+        self.username = username
+        self._password = password
+        self.name = name
 
-    def get_username(self) -> str:
-        return self.username
+    def check_password(self, password: str):
+        return self._password == password
 
-    def set_username(self, new_username: str) -> None:
-        self.username = new_username
+    def change_password(self, old_pw: str, new_pw: str):
+        if self._password == old_pw:
+            self._password = new_pw
+            print("Password changed successfully.")
+            return True
+        else:
+            print("Wrong old password.")
+            return False
 
-    def change_password(self, new_password: str) -> None:
-        self.password = new_password
 
-
-# ---------------- DiarySystem ----------------
+# -------------------------
+# DiarySystem Class
+# -------------------------
 class DiarySystem:
-    def __init__(self, user: User, base_dir: Path = Path("./data")):
+    USER_FILE = "users.txt"
+    ENTRY_FILE = "entries.txt"
+
+    def __init__(self, user: User):
         self.user = user
-        self.encryption_key = user.password
-        self.entries: List[Tuple[str, DiaryEntry]] = []  # (entry_id, entry)
-        self.base_dir = base_dir / user.username
-        self.entries_dir = self.base_dir / "entries"
-        self.base_dir.mkdir(parents=True, exist_ok=True)
-        self.entries_dir.mkdir(parents=True, exist_ok=True)
-        self._save_user_profile()
-        self._scan_entries()
+        self.encryption = Encryption(user._password)
+        self.entries = self._load_entries()
 
-    # ---- helpers ----
-    def _profile_path(self) -> Path:
-        return self.base_dir / "user.json"
+    # ----------------- user handling -----------------
+    @classmethod
+    def login_or_register(cls):
+        users = {}
+        if os.path.exists(cls.USER_FILE):
+            with open(cls.USER_FILE, "r") as f:
+                for line in f:
+                    u, p, n = line.strip().split(",")
+                    users[u] = (p, n)
 
-    def _save_user_profile(self) -> None:
-        # we NEVER store the password; just username + name
-        self._profile_path().write_text(
-            json.dumps({"username": self.user.username, "name": self.user.name}, indent=2),
-            encoding="utf-8",
-        )
+        username = input("Enter username: ")
+        if username in users:
+            password = input("Enter password: ")
+            if users[username][0] == password:
+                print("Login successful!")
+                return User(username, password, users[username][1])
+            else:
+                print("Wrong password.")
+                return None
+        else:
+            print("New user. Let's register!")
+            password = input("Set a password: ")
+            name = input("Enter your name: ")
+            with open(cls.USER_FILE, "a") as f:
+                f.write(f"{username},{password},{name}\n")
+            print("Account created successfully. Please login again.")
+            return None
 
-    def _entry_path(self, entry_id: str) -> Path:
-        return self.entries_dir / f"{entry_id}.bin"
+    # ----------------- entry handling -----------------
+    def _load_entries(self):
+        entries = []
+        if os.path.exists(self.ENTRY_FILE):
+            with open(self.ENTRY_FILE, "r") as f:
+                for line in f:
+                    u, date, encrypted = line.strip().split("||")
+                    if u == self.user.username:
+                        entry = DiaryEntry("", self.encryption)
+                        entry.entry_date = date
+                        entry.encrypted_content = encrypted
+                        entries.append(entry)
+        return entries
 
-    def _scan_entries(self) -> None:
-        self.entries.clear()
-        for p in sorted(self.entries_dir.glob("*.bin")):
-            eid = p.stem
-            when = datetime.strptime(eid, "%Y%m%d_%H%M%S%f")
-            self.entries.append((eid, DiaryEntry(entry_date=when)))
+    def _save_entries(self):
+        with open(self.ENTRY_FILE, "w") as f:
+            for entry in self.entries:
+                f.write(f"{self.user.username}||{entry.get_date()}||{entry.encrypted_content}\n")
 
-    # ---- required API ----
-    def load_entry(self, entry_id: str) -> DiaryEntry:
-        blob = self._entry_path(entry_id).read_bytes()
-        entry = DiaryEntry(encrypted_content=blob, entry_date=datetime.strptime(entry_id, "%Y%m%d_%H%M%S%f"))
-        entry.decrypt_entry(self.encryption_key)
-        return entry
+    def add_entry(self, content: str):
+        entry = DiaryEntry(content, self.encryption)
+        self.entries.append(entry)
+        self._save_entries()
+        print("Entry added.")
 
-    def save_entry(self, entry_id: str, entry: DiaryEntry) -> None:
-        if not entry.encrypted_content:
-            entry.encrypt_entry(self.encryption_key)
-        self._entry_path(entry_id).write_bytes(entry.encrypted_content)
-        if not any(eid == entry_id for eid, _ in self.entries):
-            self.entries.append((entry_id, entry))
+    def list_entries(self):
+        if not self.entries:
+            print("No entries yet.")
+        for i, entry in enumerate(self.entries):
+            print(f"{i}: {entry.get_date()}")
 
-    def add_entry(self, content: str) -> str:
-        eid = datetime.now().strftime("%Y%m%d_%H%M%S%f")
-        entry = DiaryEntry(content=content, entry_date=datetime.now())
-        entry.encrypt_entry(self.encryption_key)
-        self.save_entry(eid, entry)
-        return eid
+    def view_entry(self, index: int):
+        try:
+            entry = self.entries[index]
+            print(f"Date: {entry.get_date()}")
+            print("Content:", entry.get_content(self.encryption))
+        except IndexError:
+            print("Invalid entry index.")
 
-    def update_entry(self, entry_id: str, new_content: str) -> None:
-        entry = self.load_entry(entry_id)
-        entry.set_content(new_content)
-        entry.encrypt_entry(self.encryption_key)
-        self.save_entry(entry_id, entry)
+    def update_entry(self, index: int, new_content: str):
+        try:
+            self.entries[index].update_content(new_content, self.encryption)
+            self._save_entries()
+            print("Entry updated.")
+        except IndexError:
+            print("Invalid entry index.")
 
-    def delete_entry(self, entry_id: str) -> None:
-        p = self._entry_path(entry_id)
-        if p.exists():
-            p.unlink()
-        self.entries = [(eid, e) for eid, e in self.entries if eid != entry_id]
-
-    def change_encryption_key(self, new_key: str) -> None:
-        # decrypt with old key, re-encrypt with new
-        for p in self.entries_dir.glob("*.bin"):
-            blob = p.read_bytes()
-            plain = Encryption.decrypt(blob, self.encryption_key)
-            p.write_bytes(Encryption.encrypt(plain, new_key))
-        self.encryption_key = new_key
-        self.user.change_password(new_key)
-
-    # convenience
-    def list_entries(self) -> List[Tuple[str, datetime]]:
-        return [(eid, datetime.strptime(eid, "%Y%m%d_%H%M%S%f")) for eid, _ in sorted(self.entries, key=lambda x: x[0])]
+    def delete_entry(self, index: int):
+        try:
+            del self.entries[index]
+            self._save_entries()
+            print("Entry deleted.")
+        except IndexError:
+            print("Invalid entry index.")
 
 
-# ---------------- tiny CLI ----------------
-def _menu() -> str:
-    print("\n== Diary ==")
-    print("1) Add entry")
-    print("2) List entries")
-    print("3) View entry")
-    print("4) Edit entry")
-    print("5) Delete entry")
-    print("6) Change password")
-    print("0) Exit")
-    return input("Choose: ").strip()
-
+# -------------------------
+# CLI (User Journey)
+# -------------------------
 def main():
-    print("Welcome!")
-    username = input("Username: ").strip()
-    name = input("Your name: ").strip()
-    password = getpass.getpass("Password: ")
-    system = DiarySystem(User(username=username, password=password, name=name))
+    print("Welcome to the Encrypted Diary System!")
+
+    user = None
+    while not user:
+        user = DiarySystem.login_or_register()
+
+    diary = DiarySystem(user)
 
     while True:
-        choice = _menu()
+        print("\nMenu:")
+        print("1. Add entry")
+        print("2. List entries")
+        print("3. View entry")
+        print("4. Update entry")
+        print("5. Delete entry")
+        print("6. Change password")
+        print("0. Exit")
+
+        choice = input("Choose option: ")
+
         if choice == "1":
-            print("Type your entry. End with a single '.' line:")
-            lines = []
-            while True:
-                line = input()
-                if line.strip() == ".":
-                    break
-                lines.append(line)
-            eid = system.add_entry("\n".join(lines))
-            print(f"Saved, id: {eid}")
-
+            content = input("Write your entry: ")
+            diary.add_entry(content)
         elif choice == "2":
-            print("\n-- Entries --")
-            items = system.list_entries()
-            if not items:
-                print("(none yet)")
-            else:
-                for eid, when in items:
-                    print(f"{eid} | {when}")
-
+            diary.list_entries()
         elif choice == "3":
-            eid = input("Entry id: ").strip()
-            try:
-                entry = system.load_entry(eid)
-                print("\n-----")
-                print(entry.get_content())
-                print("-----")
-            except Exception as e:
-                print(f"Error: {e}")
-
+            index = int(input("Enter entry index: "))
+            diary.view_entry(index)
         elif choice == "4":
-            eid = input("Entry id: ").strip()
-            try:
-                entry = system.load_entry(eid)
-                print("Current text:")
-                print("-----")
-                print(entry.get_content())
-                print("-----")
-                print("Type new content. End with '.' line:")
-                lines = []
-                while True:
-                    line = input()
-                    if line.strip() == ".":
-                        break
-                    lines.append(line)
-                system.update_entry(eid, "\n".join(lines))
-                print("Updated.")
-            except Exception as e:
-                print(f"Error: {e}")
-
+            index = int(input("Enter entry index: "))
+            new_content = input("Enter new content: ")
+            diary.update_entry(index, new_content)
         elif choice == "5":
-            eid = input("Entry id: ").strip()
-            system.delete_entry(eid)
-            print("Deleted (if it existed).")
-
+            index = int(input("Enter entry index: "))
+            diary.delete_entry(index)
         elif choice == "6":
-            new_pw = getpass.getpass("New password: ")
-            confirm = getpass.getpass("Confirm: ")
-            if new_pw != confirm:
-                print("Passwords don't match.")
-            else:
-                try:
-                    system.change_encryption_key(new_pw)
-                    print("Password changed; entries re-encrypted.")
-                except Exception as e:
-                    print(f"Error: {e}")
-
+            old_pw = input("Enter old password: ")
+            new_pw = input("Enter new password: ")
+            if user.change_password(old_pw, new_pw):
+                diary.encryption = Encryption(new_pw)  # update encryption
         elif choice == "0":
-            print("Bye!")
+            print("Goodbye!")
             break
         else:
-            print("Invalid choice.")
+            print("Invalid option. Try again.")
 
-if __name__ == "__main__":
-    main()
+
+main()
