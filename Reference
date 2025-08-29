@@ -83,16 +83,16 @@ class DiarySystem:
         self.entries = self._load_entries()
 
     # ----------------- user handling -----------------
-    @classmethod
-    def login_or_register(cls):
-        users = {}
+    @classmethod                                            #method is bound to class not instance
+    def login_or_register(cls):                             #cls accesses classmethod
+        users = {}                                          #users is empty dictionary
         if os.path.exists(cls.USER_FILE):
-            with open(cls.USER_FILE, "r") as f:
+            with open(cls.USER_FILE, "r") as f:             #open user file, then for every line:
                 for line in f:
-                    u, p, n = line.strip().split(",")
-                    users[u] = (p, n)
+                    u, p, n = line.strip().split(",")       #username password name, strip remove whitespaces, split    into list
+                    users[u] = (p, n)                       #access u from users dict = password and name
 
-        username = input("Enter username: ")
+        username = input("Enter username: ")                   #should this be in user class instead??
         if username in users:
             password = input("Enter password: ")
             if users[username][0] == password:
@@ -111,10 +111,10 @@ class DiarySystem:
             return None
 
     # ----------------- entry handling -----------------
-    def _load_entries(self):
+    def _load_entries(self):                                            #reads files
         entries = []
         if os.path.exists(self.ENTRY_FILE):
-            with open(self.ENTRY_FILE, "r") as f:
+            with open(self.ENTRY_FILE, "r") as f:                       
                 for line in f:
                     u, date, encrypted = line.strip().split("||")
                     if u == self.user.username:
@@ -125,33 +125,33 @@ class DiarySystem:
         return entries
 
     def _save_entries(self):
-        with open(self.ENTRY_FILE, "w") as f:
+        with open(self.ENTRY_FILE, "w") as f:                       #writes files
             for entry in self.entries:
                 f.write(f"{self.user.username}||{entry.get_date()}||{entry.encrypted_content}\n")
 
-    def add_entry(self, content: str):
+    def add_entry(self, content: str):                              #append, then write
         entry = DiaryEntry(content, self.encryption)
         self.entries.append(entry)
         self._save_entries()
         print("Entry added.")
 
-    def list_entries(self):
+    def list_entries(self):                                         #enumerates entries, print
         if not self.entries:
             print("No entries yet.")
-        for i, entry in enumerate(self.entries):
+        for i, entry in enumerate(self.entries):                   
             print(f"{i}: {entry.get_date()}")
 
-    def view_entry(self, index: int):
+    def load_entry(self, index: int):                 #renamed from "view", following given specs                       
         try:
-            entry = self.entries[index]
+            entry = self.entries[index]                     #an entry is indexed from entries[]
             print(f"Date: {entry.get_date()}")
             print("Content:", entry.get_content(self.encryption))
         except IndexError:
             print("Invalid entry index.")
 
-    def update_entry(self, index: int, new_content: str):
+    def update_entry(self, index: int, new_content: str):               
         try:
-            self.entries[index].update_content(new_content, self.encryption)
+            self.entries[index].update_content(new_content, self.encryption)  #index an entry then update, encrypt, and save
             self._save_entries()
             print("Entry updated.")
         except IndexError:
@@ -159,8 +159,8 @@ class DiarySystem:
 
     def delete_entry(self, index: int):
         try:
-            del self.entries[index]
-            self._save_entries()
+            del self.entries[index]                     #del an entry accessed thru index
+            self._save_entries()                        #run save function
             print("Entry deleted.")
         except IndexError:
             print("Invalid entry index.")
@@ -182,7 +182,7 @@ def main():
         print("\nMenu:")
         print("1. Add entry")
         print("2. List entries")
-        print("3. View entry")
+        print("3. load entry")
         print("4. Update entry")
         print("5. Delete entry")
         print("6. Change password")
@@ -197,7 +197,7 @@ def main():
             diary.list_entries()
         elif choice == "3":
             index = int(input("Enter entry index: "))
-            diary.view_entry(index)
+            diary.load_entry(index)
         elif choice == "4":
             index = int(input("Enter entry index: "))
             new_content = input("Enter new content: ")
