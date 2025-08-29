@@ -2,7 +2,7 @@ import os
 import string
 import random
 from datetime import datetime
-from abc import ABC, abstractmethod
+
 
 # -------------------------
 # Encryption Class
@@ -16,7 +16,7 @@ class Encryption:
 
     def _make_cipher(self, password: str):
         chars = list(self.alphabet)
-        random.seed(password)
+        random.seed(password)  # makes cipher unique per password
         shuffled = chars.copy()
         random.shuffle(shuffled)
         return dict(zip(chars, shuffled))
@@ -29,60 +29,48 @@ class Encryption:
 
 
 # -------------------------
-# Abstract DiaryEntry Class
+# DiaryEntry Class
 # -------------------------
+# -------------------------
+# DiaryEntry Class
+# -------------------------
+from abc import ABC, abstractmethod
+
 class DiaryEntry(ABC):
-    def __init__(self, title, content, location, mood, entry_date=None):
-        self.__title = title
+    def __init__(self, content: str, encryption, entry_date=None):
         self.__content = content
-        self.__entry_date = entry_date if entry_date else datetime.now()
-        self.location = location
-        self.mood = mood
-
-    def get_title(self):
-        return self.__title
-
-    def set_title(self, title):
-        self.__title = title
-
-    def get_content(self):
-        return self.__content
-
-    def set_content(self, content):
-        self.__content = content
-
-    def get_entry_date(self):
-        return self.__entry_date.strftime("%B %d, %Y %I:%M %p")
-
-    @abstractmethod
-    def display_entry(self):
-        pass
-
-
-# -------------------------
-# Subclass: MyEntry
-# -------------------------
-class MyEntry(DiaryEntry):
-    def __init__(self, title, content, location, mood, encryption: Encryption, entry_date=None):
-        super().__init__(title, content, location, mood, entry_date)
+        self.entry_date = entry_date if entry_date else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.encrypted_content = encryption.encrypt(content)
 
-    def get_decrypted_content(self, encryption: Encryption):
+    def get_content(self, encryption):
         return encryption.decrypt(self.encrypted_content)
 
-    def update_content(self, new_content: str, encryption: Encryption):
-        self.set_content(new_content)
+    def set_content(self, new_content, encryption):
+        self.__content = new_content
         self.encrypted_content = encryption.encrypt(new_content)
 
-    def display_entry(self):
-        return (
-            f"\033[1mTitle:\033[0m {self.get_title()}\n"
-            f"\033[1mWritten on:\033[0m {self.get_entry_date()}\n"
-            f"\033[1mLocation:\033[0m {self.location}\n"
-            f"\033[1mMood:\033[0m {self.mood}\n"
-            f"\033[1mDiary Content:\033[0m {self.get_content()}"
-        )
+    def get_entry_date(self):
+        return self.entry_date
 
+    @abstractmethod
+    def display_entry(self, encryption):
+        pass
+
+    def get_date(self):  
+        return self.get_entry_date()
+
+    def update_content(self, new_content, encryption):
+        return self.set_content(new_content, encryption)
+
+
+
+# Subclass: MyEntry
+class MyEntry(DiaryEntry):
+    def __init__(self, content, encryption, entry_date=None):
+        super().__init__(content, encryption, entry_date)
+
+    def display_entry(self, encryption):
+        return
 
 # -------------------------
 # User Class
@@ -152,9 +140,10 @@ class DiarySystem:
         if os.path.exists(self.ENTRY_FILE):
             with open(self.ENTRY_FILE, "r") as f:
                 for line in f:
-                    u, date, title, location, mood, encrypted = line.strip().split("||")
+                    u, date, encrypted = line.strip().split("||")
                     if u == self.user.username:
-                        entry = MyEntry(title, "", location, mood, self.encryption, datetime.strptime(date, "%Y-%m-%d %H:%M:%S"))
+                        entry = MyEntry("", self.encryption) #binago
+                        entry.entry_date = date
                         entry.encrypted_content = encrypted
                         entries.append(entry)
         return entries
@@ -162,29 +151,28 @@ class DiarySystem:
     def _save_entries(self):
         with open(self.ENTRY_FILE, "w") as f:
             for entry in self.entries:
-                raw_date = datetime.strptime(entry.get_entry_date(), "%B %d, %Y %I:%M %p").strftime("%Y-%m-%d %H:%M:%S")
-                f.write(f"{self.user.username}||{raw_date}||{entry.get_title()}||{entry.location}||{entry.mood}||{entry.encrypted_content}\n")
+                f.write(f"{self.user.username}||{entry.get_date()}||{entry.encrypted_content}\n")
 
-    def add_entry(self, title: str, content: str, location: str, mood: str):
-        entry = MyEntry(title, content, location, mood, self.encryption)
+#BINAGO
+    def add_entry(self, content: str):
+        entry = MyEntry(content, self.encryption)
         self.entries.append(entry)
         self._save_entries()
         print("Entry added.")
+
+
 
     def list_entries(self):
         if not self.entries:
             print("No entries yet.")
         for i, entry in enumerate(self.entries):
-            print(f"{i}: {entry.get_title()} ({entry.get_entry_date()})")
+            print(f"{i}: {entry.get_date()}")
 
     def view_entry(self, index: int):
         try:
             entry = self.entries[index]
-            print(f"\nTitle: {entry.get_title()}")
-            print(f"Date: {entry.get_entry_date()}")
-            print(f"Location: {entry.location}")
-            print(f"Mood: {entry.mood}")
-            print("Content:", entry.get_decrypted_content(self.encryption))
+            print(f"Date: {entry.get_date()}")
+            print("Content:", entry.get_content(self.encryption))
         except IndexError:
             print("Invalid entry index.")
 
@@ -230,11 +218,8 @@ def main():
         choice = input("Choose option: ")
 
         if choice == "1":
-            title = input("Title: ")
             content = input("Write your entry: ")
-            location = input("Location: ")
-            mood = input("Mood: ")
-            diary.add_entry(title, content, location, mood)
+            diary.add_entry(content)
         elif choice == "2":
             diary.list_entries()
         elif choice == "3":
@@ -260,4 +245,3 @@ def main():
 
 
 main()
-
