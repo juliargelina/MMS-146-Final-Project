@@ -1,18 +1,33 @@
 import os
 import string
 import random
+import sys
 from datetime import datetime
+from abc import ABC, abstractmethod
 
 
 # -------------------------
 # Encryption Class
 # -------------------------
 class Encryption:
+    """
+    Handles encryption and decryption of diary entries using a password-based cipher.
+    
+    This class creates a unique substitution cipher for each password, ensuring that
+    each user's entries are encrypted with their own unique key.
+    """
+    
     def __init__(self, key: str):
-        self.key = key
-        self.alphabet = string.ascii_letters + string.digits + string.punctuation + " "
-        self.cipher = self._make_cipher(key)
-        self.reverse_cipher = {v: k for k, v in self.cipher.items()}
+        """
+        Initialize the encryption system with a password key.
+        
+        Args:
+            key (str): The password that will be used to generate the cipher
+        """
+        self.key = key  # Store the encryption key (password)
+        self.alphabet = string.ascii_letters + string.digits + string.punctuation + " "  # Create alphabet of all possible characters (letters, numbers, punctuation, space)
+        self.cipher = self._make_cipher(key)  # Generate the cipher mapping based on the key
+        self.reverse_cipher = {v: k for k, v in self.cipher.items()} 
 
     def _make_cipher(self, password: str):
         chars = list(self.alphabet)
@@ -31,11 +46,6 @@ class Encryption:
 # -------------------------
 # DiaryEntry Class
 # -------------------------
-# -------------------------
-# DiaryEntry Class
-# -------------------------
-from abc import ABC, abstractmethod
-
 class DiaryEntry(ABC):
     def __init__(self, content: str, encryption, entry_date=None):
         self.__content = content
@@ -63,7 +73,6 @@ class DiaryEntry(ABC):
         return self.set_content(new_content, encryption)
 
 
-
 # Subclass: MyEntry
 class MyEntry(DiaryEntry):
     def __init__(self, content, encryption, entry_date=None):
@@ -71,6 +80,7 @@ class MyEntry(DiaryEntry):
 
     def display_entry(self, encryption):
         return
+
 
 # -------------------------
 # User Class
@@ -98,69 +108,168 @@ class User:
 # DiarySystem Class
 # -------------------------
 class DiarySystem:
-    USER_FILE = "users.txt"
-    ENTRY_FILE = "entries.txt"
-
+    
     def __init__(self, user: User):
-        self.user = user
+        # Create platform-independent file paths
+        self.data_dir = self._get_data_directory()
+        self.USER_FILE = os.path.join(self.data_dir, "users.txt")
+        self.ENTRY_FILE = os.path.join(self.data_dir, "entries.txt")
+        
+        # Ensure data directory exists
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+        self.user = user  # Store the current user
+        # Create encryption system using user's password
         self.encryption = Encryption(user._password)
+        # Load all entries for this user from file
         self.entries = self._load_entries()
+    
+    def _get_data_directory(self):
+        home_dir = os.path.expanduser("~")  # Get user's home directory
+        
+        if sys.platform == "darwin":  # macOS
+            # Use ~/Library/Application Support/MySecretDiary
+            data_dir = os.path.join(home_dir, "Library", "Application Support", "MySecretDiary")
+        elif sys.platform.startswith("win"):  # Windows
+            # Use %APPDATA%/MySecretDiary
+            data_dir = os.path.join(os.environ.get("APPDATA", home_dir), "MySecretDiary")
+        else:  # Linux and other Unix-like systems
+            # Use ~/.local/share/MySecretDiary
+            data_dir = os.path.join(home_dir, ".local", "share", "MySecretDiary")
+        
+        return data_dir
 
-    # ----------------- user handling -----------------
+    # -------------------User Authentication Methods----------------------
     @classmethod
     def login_or_register(cls):
-        users = {}
-        if os.path.exists(cls.USER_FILE):
-            with open(cls.USER_FILE, "r") as f:
-                for line in f:
-                    u, p, n = line.strip().split(",")
-                    users[u] = (p, n)
+        # Create a temporary instance to get file paths
+        temp_home = os.path.expanduser("~")
+        if sys.platform == "darwin":  # macOS
+            temp_data_dir = os.path.join(temp_home, "Library", "Application Support", "MySecretDiary")
+        elif sys.platform.startswith("win"):  # Windows
+            temp_data_dir = os.path.join(os.environ.get("APPDATA", temp_home), "MySecretDiary")
+        else:  # Linux
+            temp_data_dir = os.path.join(temp_home, ".local", "share", "MySecretDiary")
+        
+        # Ensure directory exists
+        os.makedirs(temp_data_dir, exist_ok=True)
+        user_file = os.path.join(temp_data_dir, "users.txt")
+        
+        users = {}  # Dictionary to store loaded user data
+        
+        # Load existing users from file if it exists
+        if os.path.exists(user_file):
+            try:
+                with open(user_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        # Each line format: username,password,name
+                        line = line.strip()
+                        if line and "," in line:  # Skip empty lines and invalid format
+                            parts = line.split(",", 2)  # Split into max 3 parts
+                            if len(parts) >= 3:
+                                u, p, n = parts[0], parts[1], parts[2]
+                                users[u] = (p, n)  # Store as tuple (password, name)
+            except (IOError, UnicodeDecodeError) as e:
+                print(f"Error reading user file: {e}")
+                print("Starting with empty user database.")
 
-        username = input("Enter username: ")
-        if username in users:
+        # Get username from user input
+        username = input("Enter username: ").strip()
+        
+        if username in users:  # Existing user - login process
             password = input("Enter password: ")
-            if users[username][0] == password:
+            if users[username][0] == password:  # Check password
                 print("Login successful!")
+                # Create and return User object
                 return User(username, password, users[username][1])
             else:
                 print("Wrong password.")
                 return None
-        else:
+        else:  # New user - registration process
             print("New user. Let's register!")
-            password = input("Set a password: ")
-            name = input("Enter your name: ")
-            with open(cls.USER_FILE, "a") as f:
-                f.write(f"{username},{password},{name}\n")
-            print("Account created successfully. Please login again.")
-            return None
+            password = input("Set a password: ").strip()
+            name = input("Enter your name: ").strip()
+            
+            # Validate input
+            if not username or not password or not name:
+                print("All fields are required. Please try again.")
+                return None
+            
+            # Check for commas in input (would break our file format)
+            if "," in username or "," in password or "," in name:
+                print("Username, password, and name cannot contain commas. Please try again.")
+                return None
+            
+            try:
+                # Save new user to file
+                with open(user_file, "a", encoding="utf-8") as f:  # 'a' = append mode
+                    f.write(f"{username},{password},{name}\n")
+                
+                print("Account created successfully. Please login again.")
+                return None  # Make them login again after registration
+            except IOError as e:
+                print(f"Error saving user data: {e}")
+                return None
 
     # ----------------- entry handling -----------------
     def _load_entries(self):
         entries = []
         if os.path.exists(self.ENTRY_FILE):
-            with open(self.ENTRY_FILE, "r") as f:
-                for line in f:
-                    u, date, encrypted = line.strip().split("||")
-                    if u == self.user.username:
-                        entry = MyEntry("", self.encryption) #binago
-                        entry.entry_date = date
-                        entry.encrypted_content = encrypted
-                        entries.append(entry)
+            try:
+                with open(self.ENTRY_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and "||" in line:
+                            parts = line.split("||", 2)
+                            if len(parts) >= 3:
+                                u, date, encrypted = parts[0], parts[1], parts[2]
+                                if u == self.user.username:
+                                    entry = MyEntry("", self.encryption)
+                                    entry.entry_date = date
+                                    entry.encrypted_content = encrypted
+                                    entries.append(entry)
+            except (IOError, UnicodeDecodeError) as e:
+                print(f"Error reading entries file: {e}")
+                print("Starting with empty diary.")
         return entries
 
     def _save_entries(self):
-        with open(self.ENTRY_FILE, "w") as f:
-            for entry in self.entries:
-                f.write(f"{self.user.username}||{entry.get_date()}||{entry.encrypted_content}\n")
+        all_entries = []
+        
+        # First, load all existing entries from all users
+        if os.path.exists(self.ENTRY_FILE):
+            try:
+                with open(self.ENTRY_FILE, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and "||" in line:
+                            parts = line.split("||", 2)
+                            if len(parts) >= 3:
+                                u = parts[0]
+                                # Keep entries from other users
+                                if u != self.user.username:
+                                    all_entries.append(line)
+            except (IOError, UnicodeDecodeError) as e:
+                print(f"Warning: Error reading existing entries: {e}")
+        
+        # Add current user's entries
+        for entry in self.entries:
+            entry_line = f"{self.user.username}||{entry.get_date()}||{entry.encrypted_content}"
+            all_entries.append(entry_line)
+        
+        # Write all entries back to file
+        try:
+            with open(self.ENTRY_FILE, "w", encoding="utf-8") as f:
+                for entry_line in all_entries:
+                    f.write(entry_line + "\n")
+        except IOError as e:
+            print(f"Error saving entries: {e}")
 
-#BINAGO
     def add_entry(self, content: str):
         entry = MyEntry(content, self.encryption)
         self.entries.append(entry)
         self._save_entries()
         print("Entry added.")
-
-
 
     def list_entries(self):
         if not self.entries:
@@ -170,26 +279,35 @@ class DiarySystem:
 
     def view_entry(self, index: int):
         try:
-            entry = self.entries[index]
-            print(f"Date: {entry.get_date()}")
-            print("Content:", entry.get_content(self.encryption))
-        except IndexError:
+            if 0 <= index < len(self.entries):
+                entry = self.entries[index]
+                print(f"Date: {entry.get_date()}")
+                print("Content:", entry.get_content(self.encryption))
+            else:
+                print("Invalid entry index.")
+        except (IndexError, ValueError):
             print("Invalid entry index.")
 
     def update_entry(self, index: int, new_content: str):
         try:
-            self.entries[index].update_content(new_content, self.encryption)
-            self._save_entries()
-            print("Entry updated.")
-        except IndexError:
+            if 0 <= index < len(self.entries):
+                self.entries[index].update_content(new_content, self.encryption)
+                self._save_entries()
+                print("Entry updated.")
+            else:
+                print("Invalid entry index.")
+        except (IndexError, ValueError):
             print("Invalid entry index.")
 
     def delete_entry(self, index: int):
         try:
-            del self.entries[index]
-            self._save_entries()
-            print("Entry deleted.")
-        except IndexError:
+            if 0 <= index < len(self.entries):
+                del self.entries[index]
+                self._save_entries()
+                print("Entry deleted.")
+            else:
+                print("Invalid entry index.")
+        except (IndexError, ValueError):
             print("Invalid entry index.")
 
 
@@ -223,15 +341,24 @@ def main():
         elif choice == "2":
             diary.list_entries()
         elif choice == "3":
-            index = int(input("Enter entry index: "))
-            diary.view_entry(index)
+            try:
+                index = int(input("Enter entry index: "))
+                diary.view_entry(index)
+            except ValueError:
+                print("Please enter a valid number.")
         elif choice == "4":
-            index = int(input("Enter entry index: "))
-            new_content = input("Enter new content: ")
-            diary.update_entry(index, new_content)
+            try:
+                index = int(input("Enter entry index: "))
+                new_content = input("Enter new content: ")
+                diary.update_entry(index, new_content)
+            except ValueError:
+                print("Please enter a valid number.")
         elif choice == "5":
-            index = int(input("Enter entry index: "))
-            diary.delete_entry(index)
+            try:
+                index = int(input("Enter entry index: "))
+                diary.delete_entry(index)
+            except ValueError:
+                print("Please enter a valid number.")
         elif choice == "6":
             old_pw = input("Enter old password: ")
             new_pw = input("Enter new password: ")
@@ -244,4 +371,5 @@ def main():
             print("Invalid option. Try again.")
 
 
-main()
+if __name__ == "__main__":
+    main()
