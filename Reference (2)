@@ -197,7 +197,7 @@ class DiarySystem:
 # CLI (User Journey)
 # -------------------------
 def main():
-    print("Welcome to the Encrypted Diary System!")
+    print("Welcome to My Secret Diary!")
 
     user = None
     while not user:
