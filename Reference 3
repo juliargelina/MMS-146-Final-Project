@@ -45,7 +45,7 @@ class Encryption:
 # -------------------------
 class DiaryEntry(ABC):
     def __init__(self, title: str, content: str, encryption, entry_date=None):
-        self.title = title
+        self.title = title                                                        
         self.entry_date = entry_date if entry_date else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.encrypted_content = encryption.encrypt(content)
 
@@ -101,13 +101,13 @@ class User:
         '''
         Initializes a new instance of the User class.
         Parameters:
-        username (str): Unique username for the user.
-        password (str): Password for the user's account.
-        name (str): Full name of the user.
+        username (str): Unique username for the user.        
+        password (str): Password for the user's account.    
+        name (str): Full name of the user.                  
         '''
-        self.username = username
-        self._password = password
-        self.name = name
+        self.username = username        # Store the username
+        self._password = password       # Store the password
+        self.name = name                # Store the user's full name
 
     def check_password(self, password: str):
         ''' returns the passwod of the user.'''
@@ -115,8 +115,8 @@ class User:
 
     def change_password(self, old_pw: str, new_pw: str):
         ''' returns the changed passwod of the user.'''
-        if self._password == old_pw:
-            self._password = new_pw
+        if self._password == old_pw:         # Verify old password
+            self._password = new_pw          # Update to new password
             print("Password changed successfully.")
             return True
         else:
@@ -131,20 +131,20 @@ class DiarySystem:
     ''' 
     Manages diary entries, user authentication, and data storage.
     '''
-    def __init__(self, user: User):
+    def __init__(self, user: User):                         
         '''
         Initializes the DiarySystem for the given user.
         Parameters:
         user (User): The authenticated user.
         '''
-        self.data_dir = self._get_data_directory()
-        self.USER_FILE = os.path.join(self.data_dir, "users.txt")
-        self.ENTRY_FILE = os.path.join(self.data_dir, "entries.txt")
-        os.makedirs(self.data_dir, exist_ok=True)
+        self.data_dir = self._get_data_directory()                          # Identify the correct directory for storing data files.
+        self.USER_FILE = os.path.join(self.data_dir, "users.txt")           # Define file paths for storing users and diary entries
+        self.ENTRY_FILE = os.path.join(self.data_dir, "entries.txt")        # Define file paths for storing users and diary entries
+        os.makedirs(self.data_dir, exist_ok=True)                           # Create the directory if it doesn't exist
 
-        self.user = user
-        self.encryption = Encryption(user._password)
-        self.entries = self._load_entries()
+        self.user = user                                                    # Store the user object
+        self.encryption = Encryption(user._password)                        # Create an Encryption object using the user's password
+        self.entries = self._load_entries()                                 # Load existing diary entries from file
 
     def _get_data_directory(self):
         '''Returns to str: Path to the data storage directory.'''
