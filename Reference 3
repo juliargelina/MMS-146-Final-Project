@@ -94,15 +94,27 @@ class ReflectiveEntry(DiaryEntry):
 # User Class
 # -------------------------
 class User:
+    ''' 
+    Represents a user in the diary systme.
+    '''
     def __init__(self, username: str, password: str, name: str):
+        '''
+        Initializes a new instance of the User class.
+        Parameters:
+        username (str): Unique username for the user.
+        password (str): Password for the user's account.
+        name (str): Full name of the user.
+        '''
         self.username = username
         self._password = password
         self.name = name
 
     def check_password(self, password: str):
+        ''' returns the passwod of the user.'''
         return self._password == password
 
     def change_password(self, old_pw: str, new_pw: str):
+        ''' returns the changed passwod of the user.'''
         if self._password == old_pw:
             self._password = new_pw
             print("Password changed successfully.")
@@ -116,7 +128,15 @@ class User:
 # DiarySystem Class
 # -------------------------
 class DiarySystem:
+    ''' 
+    Manages diary entries, user authentication, and data storage.
+    '''
     def __init__(self, user: User):
+        '''
+        Initializes the DiarySystem for the given user.
+        Parameters:
+        user (User): The authenticated user.
+        '''
         self.data_dir = self._get_data_directory()
         self.USER_FILE = os.path.join(self.data_dir, "users.txt")
         self.ENTRY_FILE = os.path.join(self.data_dir, "entries.txt")
@@ -127,6 +147,7 @@ class DiarySystem:
         self.entries = self._load_entries()
 
     def _get_data_directory(self):
+        '''Returns to str: Path to the data storage directory.'''
         home_dir = os.path.expanduser("~")  # ito inadd ko last night para compatible with diff OS
         
         if sys.platform == "darwin":  # macOS
