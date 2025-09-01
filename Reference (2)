@@ -140,7 +140,7 @@ class DiarySystem:
         return data_dir
 
     # -------------------User Authentication Methods----------------------
-    @classmethod
+       @classmethod
     def login_or_register(cls):
         # Create a temporary instance to get file paths
         temp_home = os.path.expanduser("~")
@@ -183,7 +183,7 @@ class DiarySystem:
                 # Create and return User object
                 return User(username, password, users[username][1])
             else:
-                print("Wrong password.")
+                print("Wrong password. Please try again.")
                 return None
         else:  # New user - registration process
             print("New user. Let's register!")
@@ -205,8 +205,9 @@ class DiarySystem:
                 with open(user_file, "a", encoding="utf-8") as f:  # 'a' = append mode
                     f.write(f"{username},{password},{name}\n")
                 
-                print("Account created successfully. Please login again.")
-                return None  # Make them login again after registration
+                print("Account created successfully!")
+                # Return the new user object instead of forcing another login
+                return User(username, password, name)
             except IOError as e:
                 print(f"Error saving user data: {e}")
                 return None
@@ -371,5 +372,5 @@ def main():
             print("Invalid option. Try again.")
 
 
-if __name__ == "__main__":
+
     main()
