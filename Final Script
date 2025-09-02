@@ -391,85 +391,133 @@ class DiarySystem:
 # CLI (User Journey)
 # -------------------------
 def main():
-    try:
+    """
+    Function that runs the Secret Diary application.
+    
+    Shows (text based) welcome message, handles login, and displays menu options
+    for managing diary entries until user exits.
+    """
+try:
+        # Show welcome message
         print("Welcome to My Secret Diary!")
         user = None
+        
+        # Keep asking for login until successful
         while not user:
             user = DiarySystem.login_or_register()
-
+        
+        # Create diary system for logged in user
         diary = DiarySystem(user)
-
+        
+        # Show menu and handle user choices
         while True:
+            # Display all menu options
             print("\nMenu:")
             print("1. Add entry")
-            print("2. List entries")
+            print("2. List entries") 
             print("3. View entry")
             print("4. Update entry")
             print("5. Delete entry")
             print("6. Change password")
             print("0. Exit")
-
+            
+            # Get user's menu choice
             choice = input("Choose option: ").strip()
-
+            
             if choice == "1":
+                # Create new diary entry
                 title = input("Enter entry title: ")
                 content = input("Write your entry: ")
                 entry_type = input("Is this a reflective entry? (y/n): ").strip().lower()
+                
+                # Check if user wants mood tracking
                 if entry_type == "y":
+                    # Add reflective entry with mood
                     mood = input("Enter your mood (e.g., Happy, Sad, Excited): ").strip()
                     diary.add_entry(title, content, mood)
                 else:
+                    # Add regular entry without mood
                     diary.add_entry(title, content)
+                    
             elif choice == "2":
+                # Show all entries with their titles and dates
                 diary.list_entries()
+                
             elif choice == "3":
+                # Display full content of selected entry
                 try:
+                    # Get entry number from user
                     index = int(input("Enter entry index: "))
                     diary.view_entry(index)
                 except ValueError:
+                    # Handle non-number input
                     print("Please enter a valid number.")
+                    
             elif choice == "4":
+                # Edit existing entry content
                 try:
+                    # Get entry number to edit
                     index = int(input("Enter entry index: "))
                     new_content = input("Enter new content: ")
                     diary.update_entry(index, new_content)
                 except ValueError:
+                    # Handle non-number input
                     print("Please enter a valid number.")
+                    
             elif choice == "5":
+                # Remove entry permanently
                 try:
+                    # Get entry number to delete
                     index = int(input("Enter entry index: "))
                     diary.delete_entry(index)
                 except ValueError:
+                    # Handle non-number input
                     print("Please enter a valid number.")
             elif choice == "6":
+                # Update password and save to file
                 old_pw = input("Enter old password: ")
                 new_pw = input("Enter new password: ")
+                
+                # Check if old password is correct
                 if user.change_password(old_pw, new_pw):
+                    # Update encryption with new password
                     diary.encryption = Encryption(new_pw)
-                    # Persist password change
+                    
+                    # Save new password to users.txt file
                     try:
+                        # Read all user data from file
                         with open(diary.USER_FILE, "r", encoding="utf-8") as f:
                             lines = f.readlines()
+                        
+                        # Write back with updated password
                         with open(diary.USER_FILE, "w", encoding="utf-8") as f:
                             for line in lines:
                                 if line.startswith(f"{user.username},"):
+                                    # Replace this user's line with new password
                                     f.write(f"{user.username},{new_pw},{user.name}\n")
                                 else:
+                                    # Keep other users' data unchanged
                                     f.write(line)
                     except IOError as e:
                         print(f"Warning: Could not update password in file: {e}")
+                        
             elif choice == "0":
+                # Exit the program
                 print("Goodbye!")
                 break
             else:
+                # Handle invalid menu choices
                 print("Invalid option. Try again.")
-
-    except KeyboardInterrupt:
-        print("\n\nProgram interrupted by user. Goodbye!")
-    except Exception as e:
-        print(f"\nAn unexpected error occurred: {e}")
-        print("Please try again.")
+    
+except KeyboardInterrupt:
+# Handle Ctrl+C gracefully #For error handling, instead of crashing, this code catches it and forcefullu closing the program
+    print("\n\nProgram interrupted by user. Goodbye!")
+except Exception as e:
+    # Handle any unexpected errors
+    print(f"\nAn unexpected error occurred: {e}")
+    print("Please try again.")
 
 
 if __name__ == "__main__":
     main()
+   
