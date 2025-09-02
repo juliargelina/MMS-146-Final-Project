@@ -41,6 +41,12 @@ class Encryption:
 
     def decrypt(self, text: str) -> str:
         return "".join(self.reverse_cipher.get(c, c) for c in text)
+    
+    def change_encryption_key (self, new_encryption_key: str):
+        '''Changes the encryption key'''
+        self.key = new_encryption_key
+        self._make_cipher(new_encryption_key)
+        self.reverse_cipher = {v: k for k, v in self.cipher.items()} 
 
 
 # -------------------------
@@ -416,6 +422,12 @@ class Encryption:
 
     def decrypt(self, text: str) -> str:
         return "".join(self.reverse_cipher.get(c, c) for c in text)
+    
+    def change_encryption_key (self, new_encryption_key: str):
+        '''Changes the encryption key'''
+        self.key = new_encryption_key
+        self._make_cipher(new_encryption_key)
+        self.reverse_cipher = {v: k for k, v in self.cipher.items()} 
 
 
 # -------------------------
