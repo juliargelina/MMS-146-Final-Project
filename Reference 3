@@ -27,6 +27,7 @@ class Encryption:
         self.reverse_cipher = {v: k for k, v in self.cipher.items()} 
 
     def _make_cipher(self, password: str):
+        '''Creates a cipher for the text'''
         chars = list(self.alphabet)
         random.seed(password)  # makes cipher unique per password
         shuffled = chars.copy()
@@ -34,10 +35,18 @@ class Encryption:
         return dict(zip(chars, shuffled))
 
     def encrypt(self, text: str) -> str:
+        '''Encrypts a diary entry'''
         return "".join(self.cipher.get(c, c) for c in text)
 
     def decrypt(self, text: str) -> str:
+        '''Decrypts a diary entry'''
         return "".join(self.reverse_cipher.get(c, c) for c in text)
+    
+    def change_encryption_key (self, new_encryption_key: str):
+        '''Changes the encryption key'''
+        self.key = new_encryption_key
+        self._make_cipher(new_encryption_key)
+        self.reverse_cipher = {v: k for k, v in self.cipher.items()} 
 
 
 # -------------------------
