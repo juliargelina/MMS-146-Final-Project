@@ -53,51 +53,117 @@ class Encryption:
 # DiaryEntry Base Class
 # -------------------------
 class DiaryEntry(ABC):
+    '''
+    Represents a diary entry in the system.
+    This is the base class, and other diary entry types will inherit from it.
+    '''
+
     def __init__(self, title: str, content: str, encryption, entry_date=None):
-        self.title = title                                                        
+        '''
+        Creates a new diary entry.
+
+        Parameters:
+        title: The title of the entry.
+        content: The content of the entry.
+        encryption: Used to encrypt the content.
+        entry_date: The date of the entry (default is current date and time).
+        '''
+        self.title = title
         self.entry_date = entry_date if entry_date else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.encrypted_content = encryption.encrypt(content)
 
     def get_content(self, encryption):
+        '''
+        Gets the decrypted content of the entry.
+        '''
         return encryption.decrypt(self.encrypted_content)
 
     def set_content(self, new_content, encryption):
+        '''
+        Sets the content of the entry with new content.
+        '''
         self.encrypted_content = encryption.encrypt(new_content)
 
     def get_date(self):
+        '''
+        Gets the date of the entry.
+        '''
         return self.entry_date
 
     def update_content(self, new_content, encryption):
+        '''
+        Updates the content of the entry.
+        '''
         self.set_content(new_content, encryption)
 
     @abstractmethod
     def display_entry(self, encryption):
+        '''
+        Shows the entry details.
+        This must be made in the subclasses.
+        '''
         pass
 
 
-# -------------------------
-# Subclasses
-# -------------------------
+# ------------------------------
+# Diary Entry Subclass (MyEntry)
+# ------------------------------
 class MyEntry(DiaryEntry):
+    '''
+    Represents a personal diary entry.
+    This is a simple type of entry where you only write what happened.
+    This subclass implements the display_entry method for standard diary entries.
+    '''
+
     def display_entry(self, encryption):
+        '''
+        Shows the entry with title, date, and content.
+        '''
         return f"Title: {self.title}\nDate: {self.entry_date}\nContent: {self.get_content(encryption)}"
 
     def __repr__(self):
+        '''
+        Shows the MyEntry object in text form.
+        '''
         return f"<MyEntry title='{self.title}' date='{self.entry_date}'>"
 
 
+# ---------------------------------------
+# Diary Entry Subclass (ReflectiveEntry)
+# ---------------------------------------
 class ReflectiveEntry(DiaryEntry):
+    '''
+    Represents a reflective diary entry.
+    The subclass a type of entry where you write not only what happened but also how you felt about it. 
+    This subclass includes an additional attribute 'mood' to describe the emotional tone of the entry.
+    '''
+
     def __init__(self, title, content, mood, encryption, entry_date=None):
+        '''
+        Creates a reflective diary entry.
+
+        Parameters:
+        title: The title of the entry.
+        content: The content of the entry.
+        mood: The mood of the entry.
+        encryption: Used to encrypt the content.
+        entry_date: The date of the entry (default is current date and time).
+        '''
         super().__init__(title, content, encryption, entry_date)
         self.mood = mood
 
     def display_entry(self, encryption):
+        '''
+        Shows the entry with title, mood, date, and content.
+        '''
         return (f"Title: {self.title}\nMood: {self.mood}\nDate: {self.entry_date}\n"
                 f"Content: {self.get_content(encryption)}")
 
     def __repr__(self):
+        '''
+        Shows the ReflectiveEntry object in text form.
+        '''
         return f"<ReflectiveEntry title='{self.title}' mood='{self.mood}' date='{self.entry_date}'>"
-
 
 # -------------------------
 # User Class
