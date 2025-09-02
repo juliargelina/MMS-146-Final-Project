@@ -256,6 +256,9 @@ class DiarySystem:
 
     # ----------------- Entry Handling -----------------
     def _load_entries(self):
+        '''
+        Load entries belonging to the current user from the entry file.
+        '''
         entries = []
         if os.path.exists(self.ENTRY_FILE):
             try:
@@ -284,6 +287,9 @@ class DiarySystem:
         return entries
 
     def _save_entries(self):
+        '''
+        Save all entries back to file.
+        '''
         all_entries = []
         if os.path.exists(self.ENTRY_FILE):
             try:
@@ -318,6 +324,9 @@ class DiarySystem:
             print(f"Error saving entries: {e}")
 
     def add_entry(self, title: str, content: str, mood: str = None):
+        '''
+        Add a new entry for the current user.
+        '''
         if mood:
             entry = ReflectiveEntry(title, content, mood, self.encryption)
         else:
@@ -327,6 +336,9 @@ class DiarySystem:
         print("Entry added.")
 
     def list_entries(self):
+        '''
+        Display a list of all entries for the current user.
+        '''
         if not self.entries:
             print("No entries yet.")
             return
@@ -335,6 +347,9 @@ class DiarySystem:
             print(f"{i}: [{entry_type}] {entry.title} ({entry.get_date()})")
 
     def view_entry(self, index: int):
+        '''
+        Display the content of a specific entry.
+        '''
         try:
             if 0 <= index < len(self.entries):
                 print(self.entries[index].display_entry(self.encryption))
@@ -344,6 +359,9 @@ class DiarySystem:
             print("Invalid entry index.")
 
     def update_entry(self, index: int, new_content: str):
+        ''' 
+        Update the content of an existing entry.
+        '''
         try:
             if 0 <= index < len(self.entries):
                 self.entries[index].update_content(new_content, self.encryption)
@@ -355,6 +373,9 @@ class DiarySystem:
             print("Invalid entry index.")
 
     def delete_entry(self, index: int):
+        ''' 
+        Delete an entry from the current user's list.
+        '''
         try:
             if 0 <= index < len(self.entries):
                 del self.entries[index]
